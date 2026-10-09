@@ -1,0 +1,30 @@
+{
+  "name": "pi-work-outline",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A live, continuity-preserving work outline for Pi sessions",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi-coding-agent",
+    "work-outline",
+    "tmux"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "check": "npm test && node --check tmux-renderer.mjs"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}

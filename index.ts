@@ -1,0 +1,147 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { findBranchState, resolveOutlinePath, type WorkOutlineState } from "./src/state.ts";
+import { describeRenderMode, startTmuxRenderer, stopTmuxRenderer, type RenderMode } from "./src/tmux.ts";
+import { WorkOutlineComponent } from "./src/widget.ts";
+
+const EXTENSION_DIR = path.dirname(fileURLToPath(import.meta.url));
+const PROMPT = fs.readFileSync(path.join(EXTENSION_DIR, "prompt.md"), "utf8").trim();
+const TMUX_RENDERER = path.join(EXTENSION_DIR, "tmux-renderer.mjs");
+const WIDGET_KEY = "work-outline";
+
+function ensureOutline(outlinePath: string): void {
+	fs.mkdirSync(path.dirname(outlinePath), { recursive: true });
+	try {
+		fs.writeFileSync(
+			outlinePath,
+			"# GOAL\n\n- Establish the requested outcome and constraints.\n\n# WORK\n\n- RUN Establish scope and route [main]\n",
+			{ encoding: "utf8", flag: "wx" },
+		);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+	}
+}
+
+export default function workOutlineExtension(pi: ExtensionAPI): void {
+	let enabled = false;
+	let outlinePath: string | undefined;
+	let renderMode: RenderMode | undefined;
+	let tmuxPaneId: string | undefined;
+	let tmuxOwnerId: string | undefined;
+
+	pi.registerFlag("work-outline", {
+		description: "Maintain a live work outline in a tmux pane or Pi widget",
+		type: "boolean",
+		default: false,
+	});
+	pi.registerFlag("work-outline-file", {
+		description: "Markdown state file for --work-outline",
+		type: "string",
+	});
+
+	function showWidget(ctx: ExtensionContext): void {
+		if (!enabled || !outlinePath || ctx.mode !== "tui" || !ctx.hasUI) return;
+		const selectedPath = outlinePath;
+		ctx.ui.setWidget(WIDGET_KEY, (tui, theme) => new WorkOutlineComponent(tui, theme, selectedPath));
+	}
+
+	function clearRenderer(ctx: ExtensionContext): void {
+		if (ctx.mode === "tui" && ctx.hasUI) ctx.ui.setWidget(WIDGET_KEY, undefined);
+		if (tmuxOwnerId) stopTmuxRenderer(tmuxPaneId, tmuxOwnerId);
+		renderMode = undefined;
+		tmuxPaneId = undefined;
+		tmuxOwnerId = undefined;
+	}
+
+	function startRenderer(ctx: ExtensionContext): void {
+		clearRenderer(ctx);
+		if (ctx.mode !== "tui" || !ctx.hasUI || !outlinePath) return;
+
+		tmuxOwnerId = `${ctx.sessionManager.getSessionId()}:${process.pid}`;
+		const tmuxResult = startTmuxRenderer(outlinePath, tmuxOwnerId, TMUX_RENDERER);
+		if (tmuxResult.paneId) {
+			tmuxPaneId = tmuxResult.paneId;
+			renderMode = "tmux";
+			return;
+		}
+
+		tmuxOwnerId = undefined;
+		renderMode = "widget";
+		showWidget(ctx);
+		if (tmuxResult.attempted && tmuxResult.error) {
+			ctx.ui.notify(`Could not open tmux outline pane; using widget: ${tmuxResult.error}`, "warning");
+		}
+	}
+
+	function persistState(): void {
+		pi.appendEntry<WorkOutlineState>("work-outline-state", { enabled, outlinePath });
+	}
+
+	function enable(ctx: ExtensionContext, persist: boolean, restoredPath?: string): void {
+		outlinePath = resolveOutlinePath(pi, ctx, restoredPath ?? outlinePath);
+		ensureOutline(outlinePath);
+		enabled = true;
+		startRenderer(ctx);
+		if (persist) persistState();
+	}
+
+	function disable(ctx: ExtensionContext, persist: boolean): void {
+		clearRenderer(ctx);
+		enabled = false;
+		if (persist) persistState();
+	}
+
+	function restoreFromBranch(ctx: ExtensionContext): void {
+		const restored = findBranchState(ctx);
+		const shouldEnable = pi.getFlag("work-outline") === true || restored?.enabled === true;
+		const nextPath = resolveOutlinePath(pi, ctx, restored?.outlinePath);
+
+		clearRenderer(ctx);
+		enabled = false;
+		outlinePath = nextPath;
+		if (shouldEnable) enable(ctx, false, nextPath);
+	}
+
+	pi.on("session_start", async (_event, ctx) => restoreFromBranch(ctx));
+	pi.on("session_tree", async (_event, ctx) => restoreFromBranch(ctx));
+
+	pi.on("before_agent_start", async (event) => {
+		if (!enabled || !outlinePath) return undefined;
+		return {
+			systemPrompt: `${event.systemPrompt}\n\n${PROMPT}\n\n## Active observer file\n\nUse exactly this absolute path: \`${outlinePath}\`.`,
+		};
+	});
+
+	pi.on("session_shutdown", async (_event, ctx) => {
+		clearRenderer(ctx);
+		enabled = false;
+		outlinePath = undefined;
+	});
+
+	pi.registerCommand("work-outline", {
+		description: "Enable, disable, or show the live work outline",
+		handler: async (args, ctx) => {
+			const action = args.trim().toLowerCase();
+			if (action === "off" || action === "disable") {
+				disable(ctx, true);
+				ctx.ui.notify("Work outline disabled for this session.", "info");
+				return;
+			}
+			if (action && action !== "on" && action !== "enable" && action !== "status") {
+				ctx.ui.notify("Usage: /work-outline [on|off|status]", "warning");
+				return;
+			}
+			if (!enabled && action !== "status") enable(ctx, true);
+			if (!enabled || !outlinePath) {
+				ctx.ui.notify("Work outline is disabled. Run /work-outline to enable it.", "info");
+				return;
+			}
+			ctx.ui.notify(
+				`Work outline enabled in ${describeRenderMode(renderMode, tmuxPaneId)}: ${outlinePath}`,
+				"info",
+			);
+		},
+	});
+}
