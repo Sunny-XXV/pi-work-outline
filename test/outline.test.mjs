@@ -5,6 +5,7 @@ import {
 	parseItem,
 	parseOutline,
 	renderRecords,
+	sanitizeDiagnostic,
 	sanitizeText,
 	visibleWidth,
 	wrapBody,
@@ -46,8 +47,12 @@ test("renderRecords clamps indentation jumps while retaining a valid tree", () =
 	]);
 });
 
-test("text sanitation removes terminal escapes and controls", () => {
+test("text sanitation removes terminal escapes, control strings, and controls", () => {
 	assert.equal(sanitizeText("safe\u001b[31m red\u001b[0m\u001bc\u0007\ttail"), "safe red tail");
+	assert.equal(sanitizeText("a\u001b]8;;https://example.com\u0007b\u001b]8;;\u0007c"), "abc");
+	assert.equal(sanitizeText("a\u001b]8;;https://example.com\u001b\\b\u001b]8;;\u001b\\c"), "abc");
+	assert.equal(sanitizeText("a\u001bPpayload\u001b\\b"), "ab");
+	assert.equal(sanitizeDiagnostic("bad\u001b]8;;https://example.com\u0007path\u001b]8;;\u0007\nnext"), "badpath next");
 	assert.deepEqual(parseItem("  - safe\u001b[2J"), { level: 1, body: "safe" });
 });
 

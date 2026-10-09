@@ -6,7 +6,7 @@ The outline is designed as operational context rather than a disposable todo lis
 
 ## Features
 
-- Toggle at startup with `--work-outline` or at runtime with `/work-outline`.
+- Toggle at runtime with `/work-outline` and restore the saved state on later session loads.
 - Renders a small Markdown subset as a status-colored tree.
 - Opens a dedicated tmux pane when possible and safely falls back to a bounded Pi widget.
 - Provides `/work-outline view` for a focusable, scrollable view of the full current outline.
@@ -27,31 +27,20 @@ pi install git:https://github.com/Sunny-XXV/pi-work-outline
 For local development or a one-off run:
 
 ```bash
-pi -e ./path/to/work-outline --work-outline
+pi -e ./path/to/work-outline
 ```
 
-Pi provides `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui`; do not install private copies into this repository.
+Then run `/work-outline on` in Pi. Pi provides `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui`; do not install private copies into this repository.
 
 ## Usage
 
-Start enabled:
+Enable the outline in the current session with `/work-outline on`. The saved branch state restores it on later session loads.
 
-```bash
-pi --work-outline
-```
+For a custom observer file, set `WORK_OUTLINE_FILE` before starting Pi; relative paths resolve from Pi's working directory. The path precedence is:
 
-Use a custom observer file (relative paths resolve from Pi's working directory):
-
-```bash
-pi --work-outline --work-outline-file .pi/work-outline.md
-```
-
-The `WORK_OUTLINE_FILE` environment variable is the fallback when `--work-outline-file` is absent. The precedence is:
-
-1. `--work-outline-file`
-2. `WORK_OUTLINE_FILE`
-3. restored session path
-4. `<agent-dir>/state/work-outlines/<session-id>.md`
+1. `WORK_OUTLINE_FILE`
+2. restored session path
+3. `<agent-dir>/state/work-outlines/<session-id>.md`
 
 Runtime commands:
 
@@ -102,11 +91,12 @@ Supported status labels are `TODO`, `RUN`, `WAIT`, `BLOCK`, `DONE`, `HOLD`, and 
 ## Design
 
 ```text
-index.ts                Pi lifecycle, flags, commands, prompt section
+index.ts                Pi lifecycle, commands, and prompt section
 prompt.md               Agent-facing continuity and outline policy
 bin/tmux-renderer.mjs   Standalone tmux process and terminal colors
 src/config.ts           Pure path/state-precedence logic
-src/outline.ts          Shared parser, tree layout, sanitation, wrapping
+src/outline.mjs         Shared parser, tree layout, sanitation, wrapping
+src/outline.ts          Typed Pi-extension facade over the shared module
 src/settings.ts         Namespaced user/project settings adapter
 src/state.ts            Pi branch-state and configured-directory adapter
 src/tmux.ts             tmux lifecycle, render mode, and pane ownership
@@ -115,7 +105,7 @@ src/widget.ts           Passive widget and interactive Pi viewer
 test/                   Node built-in test suite
 ```
 
-The standalone renderer imports the same parser and tree layout as the Pi widget so the two views cannot drift independently.
+The standalone renderer and Pi widget share parser, sanitation, width, and tree-layout semantics; terminal-specific styling and wrapping adapters remain separate.
 
 ## Development
 
@@ -126,7 +116,7 @@ npm test
 npm run check
 ```
 
-No npm install is required for the pure parser/configuration tests. Loading `index.ts` is integration-tested by Pi itself because its host-provided imports are resolved by Pi's extension loader.
+No npm install is required for the tests. The package is intentionally Git-distributed (`private: true`), while the suite also exercises the packed renderer from a `node_modules` layout to prevent install-path regressions. Pi provides the host peer packages when loading `index.ts`.
 
 ## Security and operational notes
 

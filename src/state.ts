@@ -17,8 +17,8 @@ export function findBranchState(ctx: ExtensionContext): WorkOutlineState | undef
 	return mergeStoredStates(states);
 }
 
-export function configuredOutlinePath(pi: ExtensionAPI, cwd: string): string | undefined {
-	return resolveConfiguredPath(pi.getFlag("work-outline-file"), process.env.WORK_OUTLINE_FILE, cwd);
+export function configuredOutlinePath(cwd: string): string | undefined {
+	return resolveConfiguredPath(process.env.WORK_OUTLINE_FILE, cwd);
 }
 
 export function resolveOutlinePath(
@@ -27,7 +27,7 @@ export function resolveOutlinePath(
 	restoredPath?: string,
 ): string {
 	return resolveStateOutlinePath({
-		configuredPath: configuredOutlinePath(pi, ctx.cwd),
+		configuredPath: configuredOutlinePath(ctx.cwd),
 		restoredPath,
 		agentDir: getAgentDir(),
 		sessionId: ctx.sessionManager.getSessionId(),

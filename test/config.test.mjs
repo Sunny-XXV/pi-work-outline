@@ -3,18 +3,15 @@ import path from "node:path";
 import test from "node:test";
 import { mergeStoredStates, resolveConfiguredPath, resolveStateOutlinePath } from "../src/config.ts";
 
-test("CLI path overrides environment path", () => {
+test("environment path resolves from the working directory", () => {
 	assert.equal(
-		resolveConfiguredPath(" ./flag.md ", "./environment.md", "/repo"),
-		path.resolve("/repo", "flag.md"),
+		resolveConfiguredPath(" ./environment.md ", "/repo"),
+		path.resolve("/repo", "environment.md"),
 	);
 });
 
-test("environment path is used when the CLI flag is absent", () => {
-	assert.equal(
-		resolveConfiguredPath(undefined, " ./environment.md ", "/repo"),
-		path.resolve("/repo", "environment.md"),
-	);
+test("empty environment path is ignored", () => {
+	assert.equal(resolveConfiguredPath("  ", "/repo"), undefined);
 });
 
 test("configured path overrides restored state and default agent directory", () => {

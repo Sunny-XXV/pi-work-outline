@@ -4,7 +4,7 @@ import process, { stderr, stdout } from "node:process";
 import readline from "node:readline";
 import { spawnSync } from "node:child_process";
 import { styleText } from "node:util";
-import { continuationPrefix, parseOutline, visibleWidth, wrapBody } from "../src/outline.ts";
+import { continuationPrefix, parseOutline, sanitizeDiagnostic, visibleWidth, wrapBody } from "../src/outline.mjs";
 
 const outlinePath = process.argv[2];
 const ownerPidIndex = process.argv.indexOf("--owner-pid");
@@ -32,7 +32,9 @@ function colorStatus(status, text) {
 
 function renderSource(source, readError) {
 	const width = Math.max(1, stdout.columns || 80);
-	if (readError) return [styleText("redBright", `Cannot read ${outlinePath}: ${readError}`)];
+	if (readError) {
+		return [styleText("redBright", `Cannot read ${sanitizeDiagnostic(outlinePath)}: ${sanitizeDiagnostic(readError)}`)];
+	}
 
 	const lines = [];
 	for (const item of parseOutline(source)) {

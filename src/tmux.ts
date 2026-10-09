@@ -4,7 +4,13 @@ export type RenderMode = "tmux" | "widget";
 const TMUX_OWNER_OPTION = "@work-outline-owner";
 export const DEFAULT_TMUX_PANE_PERCENT = 34;
 
-type TmuxStartResult = { paneId?: string; error?: string; attempted: boolean };
+type TmuxStartResult = {
+	paneId?: string;
+	residualPaneId?: string;
+	residualOwned?: boolean;
+	error?: string;
+	attempted: boolean;
+};
 
 type RunTmux = (args: string[]) => SpawnSyncReturns<string>;
 
@@ -39,14 +45,7 @@ export function startTmuxRenderer(
 	if (sourceResult.error) return { attempted: true, error: sourceResult.error.message };
 	if (sourceResult.status !== 0 || output(sourceResult.stdout) !== sourcePane) return { attempted: false };
 
-	const nodeResult = spawnSync("node", ["-p", "process.execPath"], { encoding: "utf8", timeout: 2_000 });
-	const nodePath = output(nodeResult.stdout);
-	if (nodeResult.status !== 0 || !nodePath) {
-		return {
-			attempted: true,
-			error: nodeResult.error?.message ?? "node is unavailable for the tmux renderer",
-		};
-	}
+	const nodePath = process.execPath;
 
 	const args = [
 		"split-window",
@@ -74,34 +73,49 @@ export function startTmuxRenderer(
 	}
 
 	const paneId = output(result.stdout);
-	if (!paneId) return { attempted: true, error: "tmux did not return the new pane id" };
+	if (!/^%\d+$/.test(paneId)) return { attempted: true, error: "tmux did not return a valid new pane id" };
 	const ownerResult = runTmux(["set-option", "-p", "-t", paneId, TMUX_OWNER_OPTION, ownerId]);
 	if (ownerResult.status !== 0) {
-		runTmux(["kill-pane", "-t", paneId]);
+		const killResult = runTmux(["kill-pane", "-t", paneId]);
+		const cleared = killResult.status === 0 || !tmuxPaneExists(paneId, runTmux);
 		return {
 			attempted: true,
-			error: resultError(ownerResult, "could not mark the tmux pane"),
+			residualPaneId: cleared ? undefined : paneId,
+			residualOwned: false,
+			error: cleared
+				? resultError(ownerResult, "could not mark the tmux pane")
+				: `${resultError(ownerResult, "could not mark the tmux pane")}; the unowned pane could not be closed`,
 		};
 	}
 
-	const processResult = runTmux(["display-message", "-p", "-t", paneId, "#{pane_pid}"]);
-	if (processResult.status !== 0 || !/^\d+$/.test(output(processResult.stdout))) {
-		runTmux(["kill-pane", "-t", paneId]);
-		return { attempted: true, error: "tmux outline renderer exited during startup" };
+	const processResult = runTmux(["display-message", "-p", "-t", paneId, "#{pane_pid}\t#{pane_dead}"]);
+	if (processResult.status !== 0 || !/^\d+\t0$/.test(output(processResult.stdout))) {
+		const cleared = stopTmuxRenderer(paneId, ownerId, runTmux);
+		return {
+			attempted: true,
+			residualPaneId: cleared ? undefined : paneId,
+			residualOwned: !cleared,
+			error: cleared
+				? "tmux outline renderer exited during startup"
+				: "tmux outline renderer exited during startup and its pane could not be closed",
+		};
 	}
 	return { attempted: true, paneId };
 }
 
 export function stopTmuxRenderer(
 	paneId: string | undefined,
-	ownerId: string,
+	ownerId: string | undefined,
 	runTmux: RunTmux = defaultRunTmux,
-): void {
-	if (!paneId || !tmuxPaneExists(paneId, runTmux)) return;
-	const ownerResult = runTmux(["show-option", "-p", "-qv", "-t", paneId, TMUX_OWNER_OPTION]);
-	if (ownerResult.status === 0 && output(ownerResult.stdout) === ownerId) {
-		runTmux(["kill-pane", "-t", paneId]);
+): boolean {
+	if (!paneId || !tmuxPaneExists(paneId, runTmux)) return true;
+	if (ownerId) {
+		const ownerResult = runTmux(["show-option", "-p", "-qv", "-t", paneId, TMUX_OWNER_OPTION]);
+		if (ownerResult.status !== 0 || output(ownerResult.stdout) !== ownerId) return true;
 	}
+	const killResult = runTmux(["kill-pane", "-t", paneId]);
+	if (killResult.status === 0) return true;
+	return !tmuxPaneExists(paneId, runTmux);
 }
 
 export function describeRenderMode(renderMode: RenderMode | undefined, paneId: string | undefined): string {

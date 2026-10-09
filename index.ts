@@ -33,32 +33,26 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 	let tmuxPaneId: string | undefined;
 	let tmuxOwnerId: string | undefined;
 
-	pi.registerFlag("work-outline", {
-		description: "Maintain a live work outline in a tmux pane or Pi widget",
-		type: "boolean",
-		default: false,
-	});
-	pi.registerFlag("work-outline-file", {
-		description: "Markdown state file for --work-outline",
-		type: "string",
-	});
-
 	function showWidget(ctx: ExtensionContext): void {
 		if (!enabled || !outlinePath || ctx.mode !== "tui" || !ctx.hasUI) return;
 		const selectedPath = outlinePath;
 		ctx.ui.setWidget(WIDGET_KEY, (tui, theme) => new WorkOutlineComponent(tui, theme, selectedPath));
 	}
 
-	function clearRenderer(ctx: ExtensionContext): void {
+	function clearRenderer(ctx: ExtensionContext): boolean {
 		if (ctx.mode === "tui" && ctx.hasUI) ctx.ui.setWidget(WIDGET_KEY, undefined);
-		if (tmuxOwnerId) stopTmuxRenderer(tmuxPaneId, tmuxOwnerId);
+		if (tmuxPaneId && !stopTmuxRenderer(tmuxPaneId, tmuxOwnerId)) return false;
 		renderMode = undefined;
 		tmuxPaneId = undefined;
 		tmuxOwnerId = undefined;
+		return true;
 	}
 
 	function startRenderer(ctx: ExtensionContext): void {
-		clearRenderer(ctx);
+		if (!clearRenderer(ctx)) {
+			ctx.ui.notify("Could not close the previous tmux outline pane; not opening a duplicate renderer.", "warning");
+			return;
+		}
 		if (ctx.mode !== "tui" || !ctx.hasUI || !outlinePath) return;
 
 		const settings = loadWorkOutlineSettings({
@@ -77,6 +71,13 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 			if (tmuxResult.paneId) {
 				tmuxPaneId = tmuxResult.paneId;
 				renderMode = "tmux";
+				return;
+			}
+			if (tmuxResult.residualPaneId) {
+				tmuxPaneId = tmuxResult.residualPaneId;
+				if (!tmuxResult.residualOwned) tmuxOwnerId = undefined;
+				renderMode = "tmux";
+				ctx.ui.notify(`Could not initialize or close the tmux outline pane: ${tmuxResult.error}`, "error");
 				return;
 			}
 			tmuxOwnerId = undefined;
@@ -101,18 +102,25 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 		if (persist) persistState();
 	}
 
-	function disable(ctx: ExtensionContext, persist: boolean): void {
-		clearRenderer(ctx);
+	function disable(ctx: ExtensionContext, persist: boolean): boolean {
+		if (!clearRenderer(ctx)) {
+			ctx.ui.notify("Could not close the tmux outline pane; the outline remains enabled.", "error");
+			return false;
+		}
 		enabled = false;
 		if (persist) persistState();
+		return true;
 	}
 
 	function restoreFromBranch(ctx: ExtensionContext): void {
 		const restored = findBranchState(ctx);
-		const shouldEnable = pi.getFlag("work-outline") === true || restored?.enabled === true;
+		const shouldEnable = restored?.enabled === true;
 		const nextPath = resolveOutlinePath(pi, ctx, restored?.outlinePath);
 
-		clearRenderer(ctx);
+		if (!clearRenderer(ctx)) {
+			ctx.ui.notify("Could not close the previous tmux outline pane; branch renderer restoration was skipped.", "error");
+			return;
+		}
 		enabled = false;
 		outlinePath = nextPath;
 		if (shouldEnable) enable(ctx, false, nextPath);
@@ -141,8 +149,7 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 		handler: async (args, ctx) => {
 			const action = args.trim().toLowerCase();
 			if (action === "off" || action === "disable") {
-				disable(ctx, true);
-				ctx.ui.notify("Work outline disabled for this session.", "info");
+				if (disable(ctx, true)) ctx.ui.notify("Work outline disabled for this session.", "info");
 				return;
 			}
 			if (action && action !== "on" && action !== "enable" && action !== "status" && action !== "view") {

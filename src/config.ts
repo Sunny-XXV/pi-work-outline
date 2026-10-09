@@ -18,13 +18,10 @@ export function mergeStoredStates(states: StoredOutlineState[]): StoredOutlineSt
 }
 
 export function resolveConfiguredPath(
-	flagValue: unknown,
 	environmentValue: string | undefined,
 	cwd: string,
 ): string | undefined {
-	const configured = typeof flagValue === "string" && flagValue.trim()
-		? flagValue.trim()
-		: environmentValue?.trim();
+	const configured = environmentValue?.trim();
 	return configured ? path.resolve(cwd, configured) : undefined;
 }
 
