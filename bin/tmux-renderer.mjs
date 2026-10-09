@@ -4,7 +4,7 @@ import process, { stderr, stdout } from "node:process";
 import readline from "node:readline";
 import { spawnSync } from "node:child_process";
 import { styleText } from "node:util";
-import { continuationPrefix, parseOutline, visibleWidth, wrapBody } from "./src/outline.ts";
+import { continuationPrefix, parseOutline, visibleWidth, wrapBody } from "../src/outline.ts";
 
 const outlinePath = process.argv[2];
 const ownerPidIndex = process.argv.indexOf("--owner-pid");

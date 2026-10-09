@@ -9,7 +9,7 @@ import { WorkOutlineComponent, WorkOutlineViewerComponent } from "./src/widget.t
 
 const EXTENSION_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROMPT = fs.readFileSync(path.join(EXTENSION_DIR, "prompt.md"), "utf8").trim();
-const TMUX_RENDERER = path.join(EXTENSION_DIR, "tmux-renderer.mjs");
+const TMUX_RENDERER = path.join(EXTENSION_DIR, "bin", "tmux-renderer.mjs");
 const WIDGET_KEY = "work-outline";
 const PROMPT_SECTION_KEY = "work_outline_observer";
 

@@ -104,7 +104,7 @@ Supported status labels are `TODO`, `RUN`, `WAIT`, `BLOCK`, `DONE`, `HOLD`, and 
 ```text
 index.ts                Pi lifecycle, flags, commands, prompt section
 prompt.md               Agent-facing continuity and outline policy
-tmux-renderer.mjs       Standalone tmux process and terminal colors
+bin/tmux-renderer.mjs   Standalone tmux process and terminal colors
 src/config.ts           Pure path/state-precedence logic
 src/outline.ts          Shared parser, tree layout, sanitation, wrapping
 src/settings.ts         Namespaced user/project settings adapter
