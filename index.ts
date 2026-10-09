@@ -1,15 +1,17 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { loadWorkOutlineSettings } from "./src/settings.ts";
 import { findBranchState, resolveOutlinePath, type WorkOutlineState } from "./src/state.ts";
 import { describeRenderMode, startTmuxRenderer, stopTmuxRenderer, type RenderMode } from "./src/tmux.ts";
-import { WorkOutlineComponent } from "./src/widget.ts";
+import { WorkOutlineComponent, WorkOutlineViewerComponent } from "./src/widget.ts";
 
 const EXTENSION_DIR = path.dirname(fileURLToPath(import.meta.url));
 const PROMPT = fs.readFileSync(path.join(EXTENSION_DIR, "prompt.md"), "utf8").trim();
 const TMUX_RENDERER = path.join(EXTENSION_DIR, "tmux-renderer.mjs");
 const WIDGET_KEY = "work-outline";
+const PROMPT_SECTION_KEY = "work_outline_observer";
 
 function ensureOutline(outlinePath: string): void {
 	fs.mkdirSync(path.dirname(outlinePath), { recursive: true });
@@ -59,20 +61,32 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 		clearRenderer(ctx);
 		if (ctx.mode !== "tui" || !ctx.hasUI || !outlinePath) return;
 
-		tmuxOwnerId = `${ctx.sessionManager.getSessionId()}:${process.pid}`;
-		const tmuxResult = startTmuxRenderer(outlinePath, tmuxOwnerId, TMUX_RENDERER);
-		if (tmuxResult.paneId) {
-			tmuxPaneId = tmuxResult.paneId;
-			renderMode = "tmux";
-			return;
+		const settings = loadWorkOutlineSettings({
+			agentDir: getAgentDir(),
+			cwd: ctx.cwd,
+			projectTrusted: ctx.isProjectTrusted(),
+		});
+		if (settings.renderer !== "widget") {
+			tmuxOwnerId = `${ctx.sessionManager.getSessionId()}:${process.pid}`;
+			const tmuxResult = startTmuxRenderer(
+				outlinePath,
+				tmuxOwnerId,
+				TMUX_RENDERER,
+				settings.tmuxPanePercent,
+			);
+			if (tmuxResult.paneId) {
+				tmuxPaneId = tmuxResult.paneId;
+				renderMode = "tmux";
+				return;
+			}
+			tmuxOwnerId = undefined;
+			if (tmuxResult.attempted && tmuxResult.error) {
+				ctx.ui.notify(`Could not open tmux outline pane; using widget: ${tmuxResult.error}`, "warning");
+			}
 		}
 
-		tmuxOwnerId = undefined;
 		renderMode = "widget";
 		showWidget(ctx);
-		if (tmuxResult.attempted && tmuxResult.error) {
-			ctx.ui.notify(`Could not open tmux outline pane; using widget: ${tmuxResult.error}`, "warning");
-		}
 	}
 
 	function persistState(): void {
@@ -108,10 +122,12 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 	pi.on("session_tree", async (_event, ctx) => restoreFromBranch(ctx));
 
 	pi.on("before_agent_start", async (event) => {
-		if (!enabled || !outlinePath) return undefined;
-		return {
-			systemPrompt: `${event.systemPrompt}\n\n${PROMPT}\n\n## Active observer file\n\nUse exactly this absolute path: \`${outlinePath}\`.`,
-		};
+		if (!enabled || !outlinePath) {
+			delete event.systemPromptOptions.sections[PROMPT_SECTION_KEY];
+			return;
+		}
+		event.systemPromptOptions.sections[PROMPT_SECTION_KEY] =
+			`${PROMPT}\n\n## Active observer file\n\nUse exactly this absolute path: ${JSON.stringify(outlinePath)}.`;
 	});
 
 	pi.on("session_shutdown", async (_event, ctx) => {
@@ -121,7 +137,7 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 	});
 
 	pi.registerCommand("work-outline", {
-		description: "Enable, disable, or show the live work outline",
+		description: "Enable, disable, view, or show the live work outline",
 		handler: async (args, ctx) => {
 			const action = args.trim().toLowerCase();
 			if (action === "off" || action === "disable") {
@@ -129,13 +145,23 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 				ctx.ui.notify("Work outline disabled for this session.", "info");
 				return;
 			}
-			if (action && action !== "on" && action !== "enable" && action !== "status") {
-				ctx.ui.notify("Usage: /work-outline [on|off|status]", "warning");
+			if (action && action !== "on" && action !== "enable" && action !== "status" && action !== "view") {
+				ctx.ui.notify("Usage: /work-outline [on|off|status|view]", "warning");
 				return;
 			}
-			if (!enabled && action !== "status") enable(ctx, true);
+			if (!enabled && action !== "status" && action !== "view") enable(ctx, true);
 			if (!enabled || !outlinePath) {
 				ctx.ui.notify("Work outline is disabled. Run /work-outline to enable it.", "info");
+				return;
+			}
+			if (action === "view") {
+				if (ctx.mode !== "tui" || !ctx.hasUI) {
+					ctx.ui.notify("The outline viewer requires interactive TUI mode.", "warning");
+					return;
+				}
+				const selectedPath = outlinePath;
+				await ctx.ui.custom<void>((tui, theme, _keybindings, done) =>
+					new WorkOutlineViewerComponent(tui, theme, selectedPath, done));
 				return;
 			}
 			ctx.ui.notify(

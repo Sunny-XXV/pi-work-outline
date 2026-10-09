@@ -39,6 +39,7 @@ test("tmux renderer passes paths as distinct arguments and marks ownership", () 
 			"/tmp/outline path $(literal).md",
 			"owner",
 			"/tmp/renderer path.mjs",
+			41,
 			run,
 		);
 		assert.equal(start.paneId, "%1");
@@ -46,7 +47,34 @@ test("tmux renderer passes paths as distinct arguments and marks ownership", () 
 		assert.ok(split);
 		assert.ok(split.includes("/tmp/outline path $(literal).md"));
 		assert.ok(split.includes("/tmp/renderer path.mjs"));
+		assert.equal(split[split.indexOf("-p") + 1], "41");
 		assert.equal(split.at(-2), "--owner-pid");
+	} finally {
+		if (originalTmux === undefined) delete process.env.TMUX;
+		else process.env.TMUX = originalTmux;
+		if (originalPane === undefined) delete process.env.TMUX_PANE;
+		else process.env.TMUX_PANE = originalPane;
+	}
+});
+
+test("tmux renderer keeps the 34 percent default", () => {
+	const originalTmux = process.env.TMUX;
+	const originalPane = process.env.TMUX_PANE;
+	process.env.TMUX = "socket";
+	process.env.TMUX_PANE = "%0";
+	const calls = [];
+	const run = (args) => {
+		calls.push(args);
+		if (args[0] === "display-message" && args.at(-1) === "#{pane_id}") return result(0, args[3] === "%0" ? "%0\n" : "%1\n");
+		if (args[0] === "split-window") return result(0, "%1\n");
+		if (args[0] === "set-option") return result(0);
+		if (args.at(-1) === "#{pane_pid}") return result(0, "123\n");
+		return result(1, "", "unexpected");
+	};
+	try {
+		startTmuxRenderer("/tmp/outline.md", "owner", "/tmp/renderer.mjs", undefined, run);
+		const split = calls.find(([command]) => command === "split-window");
+		assert.equal(split[split.indexOf("-p") + 1], "34");
 	} finally {
 		if (originalTmux === undefined) delete process.env.TMUX;
 		else process.env.TMUX = originalTmux;

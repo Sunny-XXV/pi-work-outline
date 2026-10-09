@@ -1,10 +1,17 @@
 {
   "name": "pi-work-outline",
   "version": "0.1.0",
-  "private": true,
   "description": "A live, continuity-preserving work outline for Pi sessions",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sunny-XXV/pi-work-outline.git"
+  },
+  "homepage": "https://github.com/Sunny-XXV/pi-work-outline",
+  "bugs": {
+    "url": "https://github.com/Sunny-XXV/pi-work-outline/issues"
+  },
   "keywords": [
     "pi-package",
     "pi-coding-agent",

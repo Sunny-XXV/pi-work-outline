@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import process, { stderr, stdout } from "node:process";
 import readline from "node:readline";
+import { spawnSync } from "node:child_process";
 import { styleText } from "node:util";
 import { continuationPrefix, parseOutline, visibleWidth, wrapBody } from "./src/outline.ts";
 
@@ -67,6 +68,21 @@ let readError;
 let renderPending = false;
 let closed = false;
 let renderTimer;
+const tmuxPane = process.env.TMUX_PANE?.trim();
+
+function clearHistory() {
+	if (!process.env.TMUX || !tmuxPane) return;
+	spawnSync("tmux", ["clear-history", "-t", tmuxPane], {
+		stdio: "ignore",
+		timeout: 1_000,
+	});
+}
+
+function discardPreviousFrame() {
+	// CSI 3 J clears terminal scrollback even when tmux history management is unavailable.
+	stdout.write("\u001b[3J");
+	clearHistory();
+}
 
 function load() {
 	try {
@@ -82,6 +98,7 @@ function render() {
 	load();
 	readline.cursorTo(stdout, 0, 0);
 	readline.clearScreenDown(stdout);
+	discardPreviousFrame();
 	stdout.write(`${renderSource(source, readError).join("\n")}\n`);
 }
 

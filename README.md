@@ -8,7 +8,8 @@ The outline is designed as operational context rather than a disposable todo lis
 
 - Toggle at startup with `--work-outline` or at runtime with `/work-outline`.
 - Renders a small Markdown subset as a status-colored tree.
-- Opens a dedicated tmux pane when possible and safely falls back to a Pi widget.
+- Opens a dedicated tmux pane when possible and safely falls back to a bounded Pi widget.
+- Provides `/work-outline view` for a focusable, scrollable view of the full current outline.
 - Persists enabled state and the selected file on the active session branch.
 - Reconstructs state after branch navigation.
 - Uses Pi's configured agent directory for per-session state.
@@ -20,7 +21,7 @@ The outline is designed as operational context rather than a disposable todo lis
 After this repository is published:
 
 ```bash
-pi install git:https://github.com/Sunny-XXV/work-outline
+pi install git:https://github.com/Sunny-XXV/pi-work-outline
 ```
 
 For local development or a one-off run:
@@ -59,7 +60,25 @@ Runtime commands:
 /work-outline on       enable
 /work-outline off      disable
 /work-outline status   show status
+/work-outline view     open the bounded scrollable viewer
 ```
+
+## Settings
+
+Configure the preferred renderer and tmux pane width in the agent-directory `settings.json`. A trusted project may override individual fields in `.pi/settings.json`:
+
+```json
+{
+  "work-outline": {
+    "defaultRenderer": "tmux",
+    "tmuxSplitPercent": 34
+  }
+}
+```
+
+`defaultRenderer` accepts `tmux`, `auto`, or `widget`. `tmux` is the compatibility-preserving default. `tmux` and `auto` attempt tmux first and fall back to the native widget; `widget` skips tmux. `tmuxSplitPercent` accepts an integer from 10 through 80. Invalid values use the defaults shown above. The earlier draft names `renderer` and `tmuxPanePercent` are also accepted for compatibility. Run `/reload` after editing settings.
+
+The widget displays at most eight rows and links to `/work-outline view`; the viewer shows the full current outline with arrow, Page Up/Down, Home, and End scrolling. Escape or `q` closes it. A tmux refresh clears stale pane history before drawing the full current document, so scrollback does not accumulate older versions.
 
 ## Observer format
 
@@ -83,14 +102,16 @@ Supported status labels are `TODO`, `RUN`, `WAIT`, `BLOCK`, `DONE`, `HOLD`, and 
 ## Design
 
 ```text
-index.ts                Pi lifecycle, flags, command, prompt injection
+index.ts                Pi lifecycle, flags, commands, prompt section
 prompt.md               Agent-facing continuity and outline policy
 tmux-renderer.mjs       Standalone tmux process and terminal colors
 src/config.ts           Pure path/state-precedence logic
 src/outline.ts          Shared parser, tree layout, sanitation, wrapping
+src/settings.ts         Namespaced user/project settings adapter
 src/state.ts            Pi branch-state and configured-directory adapter
 src/tmux.ts             tmux lifecycle, render mode, and pane ownership
-src/widget.ts           Pi TUI component
+src/view.ts             Pure native-view height policy
+src/widget.ts           Passive widget and interactive Pi viewer
 test/                   Node built-in test suite
 ```
 
@@ -113,7 +134,7 @@ No npm install is required for the pure parser/configuration tests. Loading `ind
 - Outline text is stripped of ANSI and terminal control characters before rendering.
 - tmux receives command arguments as separate arguments rather than a shell-built command string.
 - The tmux pane is tagged with a per-session owner value and is killed only when ownership still matches.
-- The observer prompt is injected into every enabled model request. It is intentionally compact, but still has a context/cost tradeoff.
+- Observer instructions occupy one stable named system-prompt section while enabled. Pi records section deltas instead of repeated full-prompt replacements, although providers still receive the current system context on each stateless request.
 
 ## License
 

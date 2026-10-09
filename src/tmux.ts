@@ -2,7 +2,7 @@ import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 export type RenderMode = "tmux" | "widget";
 
 const TMUX_OWNER_OPTION = "@work-outline-owner";
-const TMUX_PANE_PERCENT = 34;
+export const DEFAULT_TMUX_PANE_PERCENT = 34;
 
 type TmuxStartResult = { paneId?: string; error?: string; attempted: boolean };
 
@@ -29,6 +29,7 @@ export function startTmuxRenderer(
 	outlinePath: string,
 	ownerId: string,
 	rendererPath: string,
+	panePercent = DEFAULT_TMUX_PANE_PERCENT,
 	runTmux: RunTmux = defaultRunTmux,
 ): TmuxStartResult {
 	const sourcePane = process.env.TMUX_PANE?.trim();
@@ -57,7 +58,7 @@ export function startTmuxRenderer(
 		"-t",
 		sourcePane,
 		"-p",
-		String(TMUX_PANE_PERCENT),
+		String(panePercent),
 		nodePath,
 		rendererPath,
 		outlinePath,
