@@ -14,3 +14,9 @@ test("major goal changes preserve and compress prior work", () => {
 		assert.ok(prompt.includes(requirement), `missing prompt requirement: ${requirement}`);
 	}
 });
+
+test("HUMAN is distinct from non-human blockers", () => {
+	assert.match(prompt, /HUMAN\s+cannot proceed until the user or another human/);
+	assert.match(prompt, /Use `HUMAN`, not `BLOCK`/);
+	assert.match(prompt, /`BLOCK`, or `HUMAN`/);
+});

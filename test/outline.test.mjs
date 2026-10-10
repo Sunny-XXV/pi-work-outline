@@ -6,6 +6,7 @@ import {
 	parseOutline,
 	renderRecords,
 	sanitizeDiagnostic,
+	statusBadge,
 	sanitizeText,
 	visibleWidth,
 	wrapBody,
@@ -22,6 +23,7 @@ test("parseOutline extracts goal, statuses, summaries, and hierarchy", () => {
   - Three sources are reusable.
   - RUN Validate freshness
 - TODO Build dashboard
+- HUMAN Approve production access
 `);
 	assert.deepEqual(result, [
 		{ tree: "", body: "GOAL" },
@@ -32,6 +34,7 @@ test("parseOutline extracts goal, statuses, summaries, and hierarchy", () => {
 		{ tree: "       ├─ ", body: "Three sources are reusable." },
 		{ tree: "       └─ ", status: "RUN", body: "Validate freshness" },
 		{ tree: "", status: "TODO", body: "Build dashboard" },
+		{ tree: "", status: "HUMAN", body: "Approve production access" },
 	]);
 });
 
@@ -54,6 +57,13 @@ test("text sanitation removes terminal escapes, control strings, and controls", 
 	assert.equal(sanitizeText("a\u001bPpayload\u001b\\b"), "ab");
 	assert.equal(sanitizeDiagnostic("bad\u001b]8;;https://example.com\u0007path\u001b]8;;\u0007\nnext"), "badpath next");
 	assert.deepEqual(parseItem("  - safe\u001b[2J"), { level: 1, body: "safe" });
+});
+
+test("status badges have stable width and identify animated states", () => {
+	assert.deepEqual(statusBadge("HUMAN"), { text: " HUMAN ", gap: " ", blink: true });
+	assert.deepEqual(statusBadge("RUN"), { text: " RUN   ", gap: " ", blink: true });
+	assert.deepEqual(statusBadge("DONE"), { text: " DONE  ", gap: " ", blink: false });
+	assert.equal(visibleWidth(statusBadge("HUMAN").text), visibleWidth(statusBadge("RUN").text));
 });
 
 test("visibleWidth and wrapping handle CJK, combining marks, and emoji graphemes", () => {

@@ -27,7 +27,8 @@ Put all execution state under `WORK` in process order. A work item starts with o
 TODO   not started
 RUN    actively being worked
 WAIT   launched and waiting for an external result
-BLOCK  cannot proceed without a dependency or user input
+BLOCK  cannot proceed because a non-human dependency is unavailable
+HUMAN  cannot proceed until the user or another human provides input or takes action
 DONE   completed with an adequate conclusion or verification
 HOLD   intentionally deferred; state why and when to resume
 DROP   intentionally abandoned; state why
@@ -52,7 +53,7 @@ A supporting summary is a nested bullet without a status. Use short verb/object 
   - TODO Reconcile the chain and report health
 ```
 
-Multiple `RUN` or `WAIT` nodes are allowed only when work is genuinely concurrent. Add ownership such as `[main]`, `[agent:compat]`, or `[worker:compile]` when useful. Never claim a process or subagent is running unless it was launched.
+Multiple `RUN` or `WAIT` nodes are allowed only when work is genuinely concurrent. Use `HUMAN`, not `BLOCK`, when a person must answer, approve, authenticate, decide, or act. Add ownership such as `[main]`, `[agent:compat]`, or `[worker:compile]` when useful. Never claim a process or subagent is running unless it was launched.
 
 ## Tree and process continuity
 
@@ -127,6 +128,6 @@ Before the final response:
 
 1. Reconcile every active branch.
 2. Mark the root work node `DONE`, `BLOCK`, or `HOLD` truthfully.
-3. Do not mark the root `DONE` while required work remains `TODO`, `RUN`, `WAIT`, or `BLOCK`.
+3. Do not mark the root `DONE` while required work remains `TODO`, `RUN`, `WAIT`, `BLOCK`, or `HUMAN`.
 4. Leave the compact final route and conclusions in the observer file.
 5. Ensure the final response agrees with it and identifies any unresolved node.

@@ -4,7 +4,14 @@ import process, { stderr, stdout } from "node:process";
 import readline from "node:readline";
 import { spawnSync } from "node:child_process";
 import { styleText } from "node:util";
-import { continuationPrefix, parseOutline, sanitizeDiagnostic, visibleWidth, wrapBody } from "../src/outline.mjs";
+import {
+	continuationPrefix,
+	parseOutline,
+	sanitizeDiagnostic,
+	statusBadge,
+	visibleWidth,
+	wrapBody,
+} from "../src/outline.mjs";
 
 const outlinePath = process.argv[2];
 const ownerPidIndex = process.argv.indexOf("--owner-pid");
@@ -17,17 +24,23 @@ if (!outlinePath) {
 	process.exit(2);
 }
 
-function colorStatus(status, text) {
-	switch (status) {
-		case "RUN": return styleText("cyanBright", text);
-		case "WAIT": return styleText("yellow", text);
-		case "BLOCK": return styleText("redBright", text);
-		case "DONE": return styleText("green", text);
-		case "HOLD": return styleText("magenta", text);
-		case "DROP": return styleText("gray", text);
-		case "TODO": return styleText("white", text);
-		default: return text;
-	}
+function styleStatus(status) {
+	const badge = statusBadge(status);
+	if (!badge.text) return badge;
+	const formats = (() => {
+		switch (status) {
+			case "RUN": return ["bgCyan", "black"];
+			case "WAIT": return ["bgYellow", "black"];
+			case "BLOCK": return ["bgRed", "white"];
+			case "HUMAN": return ["bgRedBright", "white", "bold"];
+			case "DONE": return ["bgGreen", "black"];
+			case "HOLD": return ["bgMagenta", "white"];
+			case "DROP": return ["bgGray", "black"];
+			case "TODO": return ["bgWhite", "black"];
+			default: return [];
+		}
+	})();
+	return { ...badge, styled: styleText(badge.blink ? ["blink", ...formats] : formats, badge.text) };
 }
 
 function renderSource(source, readError) {
@@ -47,9 +60,10 @@ function renderSource(source, readError) {
 			continue;
 		}
 
-		const statusText = item.status ? item.status.padEnd(item.tree ? 6 : 7) : "";
+		const badge = styleStatus(item.status);
+		const statusText = badge.text ? badge.text + badge.gap : "";
 		const rawPrefix = item.tree + statusText;
-		const styledPrefix = styleText("gray", item.tree) + colorStatus(item.status, statusText);
+		const styledPrefix = styleText("gray", item.tree) + (badge.styled ?? "") + badge.gap;
 		const prefixWidth = visibleWidth(rawPrefix);
 		if (prefixWidth >= width) {
 			const fallback = `${item.status ? `${item.status} ` : ""}${item.body}`;

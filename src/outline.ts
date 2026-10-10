@@ -1,6 +1,6 @@
 export * from "./outline.mjs";
 
-export const STATUSES = ["TODO", "RUN", "WAIT", "BLOCK", "DONE", "HOLD", "DROP"] as const;
+export const STATUSES = ["TODO", "RUN", "WAIT", "BLOCK", "HUMAN", "DONE", "HOLD", "DROP"] as const;
 export type Status = (typeof STATUSES)[number];
 export type RecordItem = { level: number; status?: Status; body: string };
 export type DisplayItem = { tree: string; status?: Status; body: string };
@@ -12,6 +12,7 @@ export {
 	parseOutline,
 	renderRecords,
 	sanitizeDiagnostic,
+	statusBadge,
 	sanitizeText,
 	visibleWidth,
 	wrapBody,

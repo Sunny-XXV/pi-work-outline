@@ -8,26 +8,33 @@ import {
 	visibleWidth,
 	wrapTextWithAnsi,
 } from "@earendil-works/pi-tui";
-import { continuationPrefix, parseOutline, type Status } from "./outline.ts";
+import { continuationPrefix, parseOutline, statusBadge, type Status } from "./outline.ts";
 import { capWidgetLines, VIEWER_MAX_CONTENT_LINES, WIDGET_MAX_LINES } from "./view.ts";
 
-function statusColor(theme: Theme, status: Status, text: string): string {
-	switch (status) {
-		case "RUN": return theme.fg("accent", text);
-		case "WAIT": return theme.fg("warning", text);
-		case "BLOCK": return theme.fg("error", text);
-		case "DONE": return theme.fg("success", text);
-		case "HOLD": return theme.fg("warning", text);
-		case "DROP": return theme.fg("dim", text);
-		case "TODO": return theme.fg("muted", text);
-	}
+function styleStatus(theme: Theme, status: Status): string {
+	const badge = statusBadge(status);
+	const style = (() => {
+		switch (status) {
+			case "RUN": return { fg: theme.colors.toolPendingBg, bg: theme.colors.accent };
+			case "WAIT": return { fg: theme.colors.toolPendingBg, bg: theme.colors.warning };
+			case "BLOCK": return { fg: theme.colors.toolErrorBg, bg: theme.colors.error };
+			case "HUMAN": return { fg: theme.colors.toolErrorBg, bg: theme.colors.error, bold: true };
+			case "DONE": return { fg: theme.colors.toolSuccessBg, bg: theme.colors.success };
+			case "HOLD": return { fg: theme.colors.customMessageBg, bg: theme.colors.customMessageLabel };
+			case "DROP": return { fg: theme.colors.toolPendingBg, bg: theme.colors.dim };
+			case "TODO": return { fg: theme.colors.toolPendingBg, bg: theme.colors.muted };
+		}
+	})();
+	const styled = theme.style(badge.text, style);
+	return badge.blink ? `\u001b[5m${styled}\u001b[25m` : styled;
 }
 
 function stylePrefix(theme: Theme, tree: string, status: Status | undefined): { raw: string; styled: string } {
-	const statusText = status ? status.padEnd(tree ? 6 : 7) : "";
+	const badge = status ? statusBadge(status) : undefined;
+	const statusText = badge ? badge.text + badge.gap : "";
 	return {
 		raw: tree + statusText,
-		styled: theme.fg("dim", tree) + (status ? statusColor(theme, status, statusText) : ""),
+		styled: theme.fg("dim", tree) + (status && badge ? styleStatus(theme, status) + badge.gap : ""),
 	};
 }
 

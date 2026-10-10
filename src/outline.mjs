@@ -1,8 +1,9 @@
 import { stripVTControlCharacters } from "node:util";
 
-export const STATUSES = ["TODO", "RUN", "WAIT", "BLOCK", "DONE", "HOLD", "DROP"];
+export const STATUSES = ["TODO", "RUN", "WAIT", "BLOCK", "HUMAN", "DONE", "HOLD", "DROP"];
 
 const STATUS_SET = new Set(STATUSES);
+const BLINKING_STATUS_SET = new Set(["RUN", "WAIT", "BLOCK", "HUMAN", "HOLD"]);
 const SEGMENTER = typeof Intl.Segmenter === "function"
 	? new Intl.Segmenter(undefined, { granularity: "grapheme" })
 	: undefined;
@@ -11,6 +12,15 @@ const CONTROL_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g
 
 export function isStatus(value) {
 	return STATUS_SET.has(value);
+}
+
+export function statusBadge(status) {
+	if (!isStatus(status)) return { text: "", gap: "", blink: false };
+	return {
+		text: ` ${status.padEnd(5)} `,
+		gap: " ",
+		blink: BLINKING_STATUS_SET.has(status),
+	};
 }
 
 export function sanitizeText(value) {
