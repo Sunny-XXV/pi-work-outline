@@ -26,9 +26,8 @@ export function isStatus(value) {
 
 export function statusBadge(status) {
 	const canonical = normalizeStatus(status);
-	if (!canonical) return { leading: "", text: "", gap: "", blink: false };
+	if (!canonical) return { text: "", gap: "", blink: false };
 	return {
-		leading: "",
 		text: ` ${canonical} `,
 		gap: " ",
 		blink: BLINKING_STATUS_SET.has(canonical),

@@ -61,9 +61,9 @@ function renderSource(source, readError) {
 		}
 
 		const badge = styleStatus(item.status);
-		const statusText = badge.text ? badge.leading + badge.text + badge.gap : "";
+		const statusText = badge.text ? badge.text + badge.gap : "";
 		const rawPrefix = item.tree + statusText;
-		const styledPrefix = styleText("gray", item.tree + badge.leading) + (badge.styled ?? "") + badge.gap;
+		const styledPrefix = styleText("gray", item.tree) + (badge.styled ?? "") + badge.gap;
 		const prefixWidth = visibleWidth(rawPrefix);
 		if (prefixWidth >= width) {
 			const fallback = `${item.status ? `${item.status} ` : ""}${item.body}`;

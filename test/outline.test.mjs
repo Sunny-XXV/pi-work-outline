@@ -82,7 +82,6 @@ test("text sanitation removes terminal escapes, control strings, and controls", 
 test("status badges use one uniform four-letter label with colored side cells", () => {
 	for (const status of ["TODO", "WORK", "WAIT", "BLKD", "HUMN", "DONE", "HOLD", "DROP"]) {
 		const badge = statusBadge(status);
-		assert.equal(badge.leading, "");
 		assert.equal(visibleWidth(badge.text), 6);
 		assert.equal(badge.text, ` ${status} `);
 		assert.equal(badge.gap, " ");

@@ -1,6 +1,6 @@
 {
   "name": "pi-work-outline",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "A live, continuity-preserving work outline for Pi sessions",
   "type": "module",
