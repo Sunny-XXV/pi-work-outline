@@ -65,9 +65,9 @@ Configure the preferred renderer and tmux pane width in the agent-directory `set
 }
 ```
 
-`defaultRenderer` accepts `tmux`, `auto`, or `widget`. `tmux` is the compatibility-preserving default. `tmux` and `auto` attempt tmux first and fall back to the native widget; `widget` skips tmux. `tmuxSplitPercent` accepts an integer from 10 through 80. Invalid values use the defaults shown above. The earlier draft names `renderer` and `tmuxPanePercent` are also accepted for compatibility. Run `/reload` after editing settings.
+`defaultRenderer` accepts `tmux`, `auto`, or `widget`. `tmux` is the compatibility-preserving default. `tmux` and `auto` attempt tmux first and fall back to the native widget; `widget` skips tmux. The standalone tmux renderer automatically reuses a Node host or discovers `node` through `PATH`; if no valid Node.js runtime is available, the extension warns once and uses the native widget. `tmuxSplitPercent` accepts an integer from 10 through 80. Invalid values use the defaults shown above. The earlier draft names `renderer` and `tmuxPanePercent` are also accepted for compatibility. Run `/reload` after editing settings.
 
-The widget displays at most eight rows and links to `/work-outline view`; the viewer shows the full current outline with arrow, Page Up/Down, Home, and End scrolling. Escape or `q` closes it. A tmux refresh clears stale pane history before drawing the full current document, so scrollback does not accumulate older versions.
+The widget displays at most eight rows and links to `/work-outline view`; the viewer shows the full current outline with arrow, Page Up/Down, Home, and End scrolling. Escape or `q` closes it. A tmux refresh clears stale pane history before drawing the full current document, so scrollback does not accumulate older versions. `/work-outline status` only reports the current state. Running `/work-outline`, `/work-outline on`, or `/work-outline enable` performs at most one repair attempt when a remembered tmux pane has disappeared; there is no background pane-restart loop.
 
 ## Observer format
 

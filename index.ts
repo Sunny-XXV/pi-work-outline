@@ -161,7 +161,15 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 				ctx.ui.notify("Work outline is disabled. Run /work-outline to enable it.", "info");
 				return;
 			}
-			if (action !== "view" && renderMode === "tmux" && (!tmuxPaneId || !tmuxPaneExists(tmuxPaneId))) {
+			const tmuxPaneMissing = renderMode === "tmux" && (!tmuxPaneId || !tmuxPaneExists(tmuxPaneId));
+			if (action === "status" && tmuxPaneMissing) {
+				ctx.ui.notify(
+					`Work outline is enabled, but its tmux pane is missing. Run /work-outline on to repair it: ${outlinePath}`,
+					"warning",
+				);
+				return;
+			}
+			if ((action === "on" || action === "enable" || !action) && tmuxPaneMissing) {
 				tmuxPaneId = undefined;
 				tmuxOwnerId = undefined;
 				renderMode = undefined;
