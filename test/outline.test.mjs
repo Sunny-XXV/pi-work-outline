@@ -31,9 +31,9 @@ test("parseOutline extracts canonical statuses, summaries, hierarchy, and legacy
 		{ tree: "  ", body: "Ship the dashboard." },
 		{ tree: "", body: "" },
 		{ tree: "", body: "WORK" },
-		{ tree: "", status: "DONE", body: "Inspect sources", childAnchor: 0 },
-		{ tree: "├─ ", body: "Three sources are reusable." },
-		{ tree: "└─", status: "WORK", body: "Validate freshness" },
+		{ tree: "", status: "DONE", body: "Inspect sources", childAnchor: 1 },
+		{ tree: " ├─ ", body: "Three sources are reusable." },
+		{ tree: " └─", status: "WORK", body: "Validate freshness" },
 		{ tree: "", status: "TODO", body: "Build dashboard" },
 		{ tree: "", status: "HUMN", body: "Approve production access" },
 	]);
@@ -48,9 +48,9 @@ test("renderRecords clamps indentation jumps while retaining a valid tree", () =
 		{ level: 4, body: "jump" },
 		{ level: 1, body: "sibling" },
 	]), [
-		{ tree: "", status: "WORK", body: "root", childAnchor: 0 },
-		{ tree: "├─ ", body: "jump" },
-		{ tree: "└─ ", body: "sibling" },
+		{ tree: "", status: "WORK", body: "root", childAnchor: 1 },
+		{ tree: " ├─ ", body: "jump" },
+		{ tree: " └─ ", body: "sibling" },
 	]);
 });
 
@@ -62,10 +62,10 @@ test("nested guides join parent badge edges and preserve ancestor lines", () => 
 		{ level: 1, status: "TODO", body: "sibling" },
 		{ level: 0, status: "DONE", body: "next root" },
 	]), [
-		{ tree: "", status: "DONE", body: "root", childAnchor: 0 },
-		{ tree: "├─", status: "WORK", body: "child", childAnchor: 2 },
-		{ tree: "│ └─ ", body: "grandchild" },
-		{ tree: "└─", status: "TODO", body: "sibling" },
+		{ tree: "", status: "DONE", body: "root", childAnchor: 1 },
+		{ tree: " ├─", status: "WORK", body: "child", childAnchor: 4 },
+		{ tree: " │  └─ ", body: "grandchild" },
+		{ tree: " └─", status: "TODO", body: "sibling" },
 		{ tree: "", status: "DONE", body: "next root" },
 	]);
 });
@@ -93,8 +93,8 @@ test("status badges use one uniform four-letter label with colored side cells", 
 });
 
 test("continuation rows retain ancestor guides and tagged-parent child stems", () => {
-	assert.equal(continuationPrefix(" WORK  ", 0), "│      ");
-	assert.equal(continuationPrefix("├─ WORK  ", 2), "│ │      ");
+	assert.equal(continuationPrefix(" WORK  ", 1), " │     ");
+	assert.equal(continuationPrefix(" ├─ WORK  ", 4), " │  │     ");
 });
 
 test("visibleWidth and wrapping handle CJK, combining marks, and emoji graphemes", () => {

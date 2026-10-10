@@ -99,7 +99,7 @@ export function renderRecords(records) {
 		}
 		const treeWidth = [...tree].length;
 		const badge = statusBadge(record.status);
-		anchors[index] = treeWidth;
+		anchors[index] = badge.text ? treeWidth + 1 : treeWidth;
 		const hasChildren = normalized[index + 1]?.level > level;
 		const childAnchor = hasChildren && badge.text ? anchors[index] : undefined;
 		output.push(record.status
