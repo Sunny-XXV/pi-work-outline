@@ -31,8 +31,8 @@ test("parseOutline extracts goal, statuses, summaries, and hierarchy", () => {
 		{ tree: "", body: "" },
 		{ tree: "", body: "WORK" },
 		{ tree: "", status: "DONE", body: "Inspect sources" },
-		{ tree: "       ├─ ", body: "Three sources are reusable." },
-		{ tree: "       └─ ", status: "RUN", body: "Validate freshness" },
+		{ tree: "  ├─ ", body: "Three sources are reusable." },
+		{ tree: "  └─ ", status: "RUN", body: "Validate freshness" },
 		{ tree: "", status: "TODO", body: "Build dashboard" },
 		{ tree: "", status: "HUMAN", body: "Approve production access" },
 	]);
@@ -45,8 +45,24 @@ test("renderRecords clamps indentation jumps while retaining a valid tree", () =
 		{ level: 1, body: "sibling" },
 	]), [
 		{ tree: "", status: "RUN", body: "root" },
-		{ tree: "       ├─ ", body: "jump" },
-		{ tree: "       └─ ", body: "sibling" },
+		{ tree: "   ├─ ", body: "jump" },
+		{ tree: "   └─ ", body: "sibling" },
+	]);
+});
+
+test("nested guides anchor to the first label character and preserve ancestor lines", () => {
+	assert.deepEqual(renderRecords([
+		{ level: 0, status: "DONE", body: "root" },
+		{ level: 1, status: "RUN", body: "child" },
+		{ level: 2, body: "grandchild" },
+		{ level: 1, status: "TODO", body: "sibling" },
+		{ level: 0, status: "DONE", body: "next root" },
+	]), [
+		{ tree: "", status: "DONE", body: "root" },
+		{ tree: "  ├─ ", status: "RUN", body: "child" },
+		{ tree: "  │     └─ ", body: "grandchild" },
+		{ tree: "  └─ ", status: "TODO", body: "sibling" },
+		{ tree: "", status: "DONE", body: "next root" },
 	]);
 });
 

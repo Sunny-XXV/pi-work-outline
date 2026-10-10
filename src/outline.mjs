@@ -62,6 +62,7 @@ export function renderRecords(records) {
 	}
 
 	const lastFlags = normalized.map((_record, index) => isLastAtLevel(normalized, index));
+	const anchors = [];
 	const ancestors = [];
 	const output = [];
 
@@ -70,13 +71,20 @@ export function renderRecords(records) {
 		ancestors.length = level;
 		let tree = "";
 		if (level > 0) {
-			tree = "       ";
+			const parentIndex = ancestors[level - 1];
+			const parentAnchor = anchors[parentIndex];
+			const prefix = Array(parentAnchor).fill(" ");
 			for (let depth = 1; depth < level; depth += 1) {
-				const ancestorIndex = ancestors[depth];
-				tree += lastFlags[ancestorIndex] ? "   " : "│  ";
+				const pathIndex = ancestors[depth];
+				if (!lastFlags[pathIndex]) prefix[anchors[ancestors[depth - 1]]] = "│";
 			}
-			tree += lastFlags[index] ? "└─ " : "├─ ";
+			tree = prefix.join("") + (lastFlags[index] ? "└─ " : "├─ ");
 		}
+		const treeWidth = [...tree].length;
+		const badge = statusBadge(record.status);
+		anchors[index] = badge.text
+			? treeWidth + badge.leading.length + 1
+			: treeWidth;
 		output.push(record.status
 			? { tree, status: record.status, body: record.body }
 			: { tree, body: record.body });
