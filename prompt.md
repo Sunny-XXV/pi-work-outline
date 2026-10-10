@@ -24,14 +24,14 @@ Keep `GOAL` concise: current requested outcome, verification surface, and import
 Put all execution state under `WORK` in process order. A work item starts with one status:
 
 ```text
-TODO   not started
-RUN    actively being worked
-WAIT   launched and waiting for an external result
-BLOCK  cannot proceed because a non-human dependency is unavailable
-HUMAN  cannot proceed until the user or another human provides input or takes action
-DONE   completed with an adequate conclusion or verification
-HOLD   intentionally deferred; state why and when to resume
-DROP   intentionally abandoned; state why
+TODO  not started
+WORK  actively being worked
+WAIT  launched and waiting for an external result
+BLKD  cannot proceed because a non-human dependency is unavailable
+HUMN  cannot proceed until the user or another human provides input or takes action
+DONE  completed with an adequate conclusion or verification
+HOLD  intentionally deferred; state why and when to resume
+DROP  intentionally abandoned; state why
 ```
 
 A supporting summary is a nested bullet without a status. Use short verb/object phrases for work nodes and put results or route-changing evidence beneath the work that produced them.
@@ -43,21 +43,21 @@ A supporting summary is a nested bullet without a status. Use short verb/object 
 
 # WORK
 
-- RUN Inspect the data flow [main]
+- WORK Inspect the data flow [main]
   - DONE Read the operating manual
     - Inspection order established.
-  - RUN Check the latest upstream date
+  - WORK Check the latest upstream date
     - DONE Query source A
       - Latest ready date is 2026-10-08.
-    - RUN Explain the missing partition
+    - WORK Explain the missing partition
   - TODO Reconcile the chain and report health
 ```
 
-Multiple `RUN` or `WAIT` nodes are allowed only when work is genuinely concurrent. Use `HUMAN`, not `BLOCK`, when a person must answer, approve, authenticate, decide, or act. Add ownership such as `[main]`, `[agent:compat]`, or `[worker:compile]` when useful. Never claim a process or subagent is running unless it was launched.
+Multiple `WORK` or `WAIT` nodes are allowed only when work is genuinely concurrent. Use `HUMN`, not `BLKD`, when a person must answer, approve, authenticate, decide, or act. Add ownership such as `[main]`, `[agent:compat]`, or `[worker:compile]` when useful. Never claim a process or subagent is running unless it was launched.
 
 ## Tree and process continuity
 
-Indentation is the investigation stack. A child exists because advancing its parent requires it. When a nested question ends, set it to `DONE`, `HOLD`, `DROP`, or `BLOCK`, record the short result or stop reason, then continue at its parent. If an incidental question is unnecessary, mark it `HOLD` with a concrete resume condition instead of letting it replace the task.
+Indentation is the investigation stack. A child exists because advancing its parent requires it. When a nested question ends, set it to `DONE`, `HOLD`, `DROP`, or `BLKD`, record the short result or stop reason, then continue at its parent. If an incidental question is unnecessary, mark it `HOLD` with a concrete resume condition instead of letting it replace the task.
 
 Preserve check → observation → response causality:
 
@@ -101,8 +101,8 @@ When the user substantially redirects the task:
   - User redirected after source validation; the source inventory remains useful.
 - DONE Reconcile the direction change
   - Dashboard work supersedes report writing.
-- RUN Build the dashboard
-  - RUN Reuse the validated source inventory
+- WORK Build the dashboard
+  - WORK Reuse the validated source inventory
 ```
 
 Replacing all prior `WORK` content is allowed only when the user explicitly requests a reset, the file belongs to another task/session, or it is unusably corrupt. A changed goal by itself is not a reset condition.
@@ -120,14 +120,14 @@ Target 24–32 source lines and normally stay at or below 40. Before adding deta
 
 This is situational awareness, not a shell transcript, durable evidence store, or final-report taxonomy. Do not copy commands, long outputs, routine successes, or facts cheaply recoverable from the session. Let the renderer wrap lines; optimize meaning, not manual column width.
 
-A terminal node must include its result, stop reason, or verification. Changing `RUN` directly to `DONE` without a useful conclusion is insufficient. Every mentioned data-flow instance must include its business date when applicable.
+A terminal node must include its result, stop reason, or verification. Changing `WORK` directly to `DONE` without a useful conclusion is insufficient. Every mentioned data-flow instance must include its business date when applicable.
 
 ## Completion
 
 Before the final response:
 
 1. Reconcile every active branch.
-2. Mark the root work node `DONE`, `BLOCK`, or `HOLD` truthfully.
-3. Do not mark the root `DONE` while required work remains `TODO`, `RUN`, `WAIT`, `BLOCK`, or `HUMAN`.
+2. Mark the root work node `DONE`, `BLKD`, or `HOLD` truthfully.
+3. Do not mark the root `DONE` while required work remains `TODO`, `WORK`, `WAIT`, `BLKD`, or `HUMN`.
 4. Leave the compact final route and conclusions in the observer file.
 5. Ensure the final response agrees with it and identifies any unresolved node.

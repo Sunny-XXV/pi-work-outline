@@ -18,7 +18,7 @@ function ensureOutline(outlinePath: string): void {
 	try {
 		fs.writeFileSync(
 			outlinePath,
-			"# GOAL\n\n- Establish the requested outcome and constraints.\n\n# WORK\n\n- RUN Establish scope and route [main]\n",
+			"# GOAL\n\n- Establish the requested outcome and constraints.\n\n# WORK\n\n- WORK Establish scope and route [main]\n",
 			{ encoding: "utf8", flag: "wx" },
 		);
 	} catch (error) {

@@ -15,10 +15,10 @@ function styleStatus(theme: Theme, status: Status): string {
 	const badge = statusBadge(status);
 	const style = (() => {
 		switch (status) {
-			case "RUN": return { fg: theme.colors.toolPendingBg, bg: theme.colors.accent };
+			case "WORK": return { fg: theme.colors.toolPendingBg, bg: theme.colors.accent };
 			case "WAIT": return { fg: theme.colors.toolPendingBg, bg: theme.colors.warning };
-			case "BLOCK": return { fg: theme.colors.toolErrorBg, bg: theme.colors.error };
-			case "HUMAN": return { fg: theme.colors.toolErrorBg, bg: theme.colors.error, bold: true };
+			case "BLKD": return { fg: theme.colors.toolErrorBg, bg: theme.colors.error };
+			case "HUMN": return { fg: theme.colors.toolErrorBg, bg: theme.colors.error, bold: true };
 			case "DONE": return { fg: theme.colors.toolSuccessBg, bg: theme.colors.success };
 			case "HOLD": return { fg: theme.colors.customMessageBg, bg: theme.colors.customMessageLabel };
 			case "DROP": return { fg: theme.colors.toolPendingBg, bg: theme.colors.dim };
@@ -73,7 +73,7 @@ function renderOutlineLines(
 		for (const [index, body] of wrapped.entries()) {
 			const line = index === 0
 				? prefix.styled + body
-				: theme.fg("dim", continuationPrefix(prefix.raw)) + body;
+				: theme.fg("dim", continuationPrefix(prefix.raw, item.childAnchor)) + body;
 			lines.push(truncateToWidth(line, width, ""));
 		}
 	}

@@ -82,13 +82,13 @@ The agent writes only two headings and `- ` list items, with two spaces per nest
 
 - DONE Inspect the current implementation
   - Found one reusable parser and two duplicated render paths.
-- RUN Refactor the renderer
+- WORK Refactor the renderer
   - TODO Run regression tests
 ```
 
-Supported status labels are `TODO`, `RUN`, `WAIT`, `BLOCK`, `HUMAN`, `DONE`, `HOLD`, and `DROP`. Use `HUMAN` when progress requires a person's answer, approval, authentication, decision, or action; reserve `BLOCK` for unavailable non-human dependencies.
+Supported status labels are the uniform four-letter set `TODO`, `WORK`, `WAIT`, `BLKD`, `HUMN`, `DONE`, `HOLD`, and `DROP`. Use `HUMN` when progress requires a person's answer, approval, authentication, decision, or action; reserve `BLKD` for unavailable non-human dependencies. Existing outline files using `RUN`, `BLOCK`, or `HUMAN` remain readable and are rendered as their canonical `WORK`, `BLKD`, or `HUMN` aliases.
 
-Both renderers display status labels as high-contrast background badges. Labels are right-aligned in a five-cell field; the badge background covers one terminal cell before and after the label, followed by one unstyled body gap. `RUN`, `WAIT`, `BLOCK`, `HUMAN`, and `HOLD` request terminal-native blink, while passive/completed badges remain static. Terminals that disable blink still show the background colors, and the extension performs no animation polling or periodic redraw.
+Both renderers display status labels as high-contrast background badges. Every badge covers one terminal cell before and after its four-letter label, followed by one unstyled body gap. `WORK`, `WAIT`, `BLKD`, `HUMN`, and `HOLD` request terminal-native blink, while passive/completed badges remain static. Terminals that disable blink still show the background colors, and the extension performs no animation polling or periodic redraw. Child guides join the parent badge at its left edge; a tagged parent that wraps carries its child stem through every continuation line.
 
 ## Design
 

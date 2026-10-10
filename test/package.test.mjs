@@ -33,7 +33,7 @@ test("packed renderer starts from a node_modules installation", { timeout: 30_00
 		assert.equal(extract.code, 0, extract.stderr);
 
 		const outlinePath = path.join(temp, "outline.md");
-		await writeFile(outlinePath, "# GOAL\n\n- Packed install\n\n# WORK\n\n- HUMAN PACKED_RENDERER_OK\n", "utf8");
+		await writeFile(outlinePath, "# GOAL\n\n- Packed install\n\n# WORK\n\n- HUMN PACKED_RENDERER_OK\n", "utf8");
 		const rendererPath = path.join(temp, "node_modules", "pi-work-outline", "bin", "tmux-renderer.mjs");
 		renderer = spawn(process.execPath, [rendererPath, outlinePath], {
 			stdio: ["ignore", "pipe", "pipe"],
@@ -45,8 +45,8 @@ test("packed renderer starts from a node_modules installation", { timeout: 30_00
 		renderer.stderr.on("data", (chunk) => { stderr += chunk; });
 		await new Promise((resolve) => setTimeout(resolve, 400));
 		assert.match(stdout, /PACKED_RENDERER_OK/, stderr);
-		assert.match(stdout, /\u001b\[5m/, "HUMAN badge should request terminal-native blink");
-		assert.match(stdout, /\u001b\[101m/, "HUMAN badge should use a bright background");
+		assert.match(stdout, /\u001b\[5m/, "HUMN badge should request terminal-native blink");
+		assert.match(stdout, /\u001b\[101m/, "HUMN badge should use a bright background");
 	} finally {
 		renderer?.kill("SIGTERM");
 		await rm(temp, { recursive: true, force: true });

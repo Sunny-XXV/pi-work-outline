@@ -1,27 +1,37 @@
 import { stripVTControlCharacters } from "node:util";
 
-export const STATUSES = ["TODO", "RUN", "WAIT", "BLOCK", "HUMAN", "DONE", "HOLD", "DROP"];
+export const STATUSES = ["TODO", "WORK", "WAIT", "BLKD", "HUMN", "DONE", "HOLD", "DROP"];
 
 const STATUS_SET = new Set(STATUSES);
-const BLINKING_STATUS_SET = new Set(["RUN", "WAIT", "BLOCK", "HUMAN", "HOLD"]);
-const STATUS_LABEL_WIDTH = Math.max(...STATUSES.map((status) => status.length));
+const STATUS_ALIASES = new Map([
+	["RUN", "WORK"],
+	["BLOCK", "BLKD"],
+	["HUMAN", "HUMN"],
+]);
+const BLINKING_STATUS_SET = new Set(["WORK", "WAIT", "BLKD", "HUMN", "HOLD"]);
 const SEGMENTER = typeof Intl.Segmenter === "function"
 	? new Intl.Segmenter(undefined, { granularity: "grapheme" })
 	: undefined;
 const CONTROL_STRING_PATTERN = /(?:\u001B|\u009B)(?:\]|P|X|\^|_)[\s\S]*?(?:\u0007|\u001B\\|\u009C)/g;
 const CONTROL_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g;
 
+export function normalizeStatus(value) {
+	if (STATUS_SET.has(value)) return value;
+	return STATUS_ALIASES.get(value);
+}
+
 export function isStatus(value) {
-	return STATUS_SET.has(value);
+	return normalizeStatus(value) !== undefined;
 }
 
 export function statusBadge(status) {
-	if (!isStatus(status)) return { leading: "", text: "", gap: "", blink: false };
+	const canonical = normalizeStatus(status);
+	if (!canonical) return { leading: "", text: "", gap: "", blink: false };
 	return {
-		leading: " ".repeat(STATUS_LABEL_WIDTH - status.length),
-		text: ` ${status} `,
+		leading: "",
+		text: ` ${canonical} `,
 		gap: " ",
-		blink: BLINKING_STATUS_SET.has(status),
+		blink: BLINKING_STATUS_SET.has(canonical),
 	};
 }
 
@@ -58,7 +68,13 @@ export function renderRecords(records) {
 	const normalized = [];
 	for (const record of records) {
 		const previousLevel = normalized.at(-1)?.level ?? -1;
-		normalized.push({ ...record, level: Math.min(record.level, previousLevel + 1) });
+		const { status: inputStatus, ...rest } = record;
+		const status = normalizeStatus(inputStatus);
+		normalized.push({
+			...rest,
+			...(status ? { status } : {}),
+			level: Math.min(record.level, previousLevel + 1),
+		});
 	}
 
 	const lastFlags = normalized.map((_record, index) => isLastAtLevel(normalized, index));
@@ -78,15 +94,16 @@ export function renderRecords(records) {
 				const pathIndex = ancestors[depth];
 				if (!lastFlags[pathIndex]) prefix[anchors[ancestors[depth - 1]]] = "│";
 			}
-			tree = prefix.join("") + (lastFlags[index] ? "└─ " : "├─ ");
+			const branch = lastFlags[index] ? "└─" : "├─";
+			tree = prefix.join("") + branch + (record.status ? "" : " ");
 		}
 		const treeWidth = [...tree].length;
 		const badge = statusBadge(record.status);
-		anchors[index] = badge.text
-			? treeWidth + badge.leading.length + 1
-			: treeWidth;
+		anchors[index] = treeWidth;
+		const hasChildren = normalized[index + 1]?.level > level;
+		const childAnchor = hasChildren && badge.text ? anchors[index] : undefined;
 		output.push(record.status
-			? { tree, status: record.status, body: record.body }
+			? { tree, status: record.status, body: record.body, ...(childAnchor === undefined ? {} : { childAnchor }) }
 			: { tree, body: record.body });
 		ancestors.push(index);
 	}
@@ -113,8 +130,9 @@ export function parseOutline(source) {
 		}
 		if (section !== "WORK") continue;
 		const [candidate, ...rest] = item.body.split(/\s+/);
-		if (candidate && isStatus(candidate) && rest.length > 0) {
-			records.push({ level: item.level, status: candidate, body: rest.join(" ") });
+		const status = normalizeStatus(candidate);
+		if (status && rest.length > 0) {
+			records.push({ level: item.level, status, body: rest.join(" ") });
 		} else {
 			records.push({ level: item.level, body: item.body });
 		}
@@ -123,8 +141,14 @@ export function parseOutline(source) {
 	return [...goal, { tree: "", body: "" }, { tree: "", body: "WORK" }, ...renderRecords(records)];
 }
 
-export function continuationPrefix(prefix) {
-	return [...prefix].map((character) => (character === "│" || character === "├" ? "│" : " ")).join("");
+export function continuationPrefix(prefix, childAnchor) {
+	const continuation = [...prefix].map((character) => (
+		character === "│" || character === "├" ? "│" : " "
+	));
+	if (Number.isInteger(childAnchor) && childAnchor >= 0 && childAnchor < continuation.length) {
+		continuation[childAnchor] = "│";
+	}
+	return continuation.join("");
 }
 
 function graphemes(text) {

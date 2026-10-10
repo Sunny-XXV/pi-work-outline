@@ -29,10 +29,10 @@ function styleStatus(status) {
 	if (!badge.text) return badge;
 	const formats = (() => {
 		switch (status) {
-			case "RUN": return ["bgCyan", "black"];
+			case "WORK": return ["bgCyan", "black"];
 			case "WAIT": return ["bgYellow", "black"];
-			case "BLOCK": return ["bgRed", "white"];
-			case "HUMAN": return ["bgRedBright", "white", "bold"];
+			case "BLKD": return ["bgRed", "white"];
+			case "HUMN": return ["bgRedBright", "white", "bold"];
 			case "DONE": return ["bgGreen", "black"];
 			case "HOLD": return ["bgMagenta", "white"];
 			case "DROP": return ["bgGray", "black"];
@@ -73,7 +73,7 @@ function renderSource(source, readError) {
 		for (const [index, body] of wrapBody(item.body, width - prefixWidth).entries()) {
 			lines.push(index === 0
 				? styledPrefix + body
-				: styleText("gray", continuationPrefix(rawPrefix)) + body);
+				: styleText("gray", continuationPrefix(rawPrefix, item.childAnchor)) + body);
 		}
 	}
 	return lines;

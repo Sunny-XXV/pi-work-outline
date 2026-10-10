@@ -15,8 +15,9 @@ test("major goal changes preserve and compress prior work", () => {
 	}
 });
 
-test("HUMAN is distinct from non-human blockers", () => {
-	assert.match(prompt, /HUMAN\s+cannot proceed until the user or another human/);
-	assert.match(prompt, /Use `HUMAN`, not `BLOCK`/);
-	assert.match(prompt, /`BLOCK`, or `HUMAN`/);
+test("four-letter HUMN is distinct from non-human BLKD", () => {
+	assert.match(prompt, /HUMN\s+cannot proceed until the user or another human/);
+	assert.match(prompt, /Use `HUMN`, not `BLKD`/);
+	assert.match(prompt, /`BLKD`, or `HUMN`/);
+	assert.doesNotMatch(prompt, /\b(?:RUN|BLOCK|HUMAN)\b/);
 });

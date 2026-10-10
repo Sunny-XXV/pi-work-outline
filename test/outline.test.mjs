@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
 	continuationPrefix,
+	normalizeStatus,
 	parseItem,
 	parseOutline,
 	renderRecords,
@@ -12,7 +13,7 @@ import {
 	wrapBody,
 } from "../src/outline.ts";
 
-test("parseOutline extracts goal, statuses, summaries, and hierarchy", () => {
+test("parseOutline extracts canonical statuses, summaries, hierarchy, and legacy aliases", () => {
 	const result = parseOutline(`# GOAL
 
 - Ship the dashboard.
@@ -30,38 +31,41 @@ test("parseOutline extracts goal, statuses, summaries, and hierarchy", () => {
 		{ tree: "  ", body: "Ship the dashboard." },
 		{ tree: "", body: "" },
 		{ tree: "", body: "WORK" },
-		{ tree: "", status: "DONE", body: "Inspect sources" },
-		{ tree: "  ├─ ", body: "Three sources are reusable." },
-		{ tree: "  └─ ", status: "RUN", body: "Validate freshness" },
+		{ tree: "", status: "DONE", body: "Inspect sources", childAnchor: 0 },
+		{ tree: "├─ ", body: "Three sources are reusable." },
+		{ tree: "└─", status: "WORK", body: "Validate freshness" },
 		{ tree: "", status: "TODO", body: "Build dashboard" },
-		{ tree: "", status: "HUMAN", body: "Approve production access" },
+		{ tree: "", status: "HUMN", body: "Approve production access" },
 	]);
+	assert.equal(normalizeStatus("RUN"), "WORK");
+	assert.equal(normalizeStatus("BLOCK"), "BLKD");
+	assert.equal(normalizeStatus("HUMAN"), "HUMN");
 });
 
 test("renderRecords clamps indentation jumps while retaining a valid tree", () => {
 	assert.deepEqual(renderRecords([
-		{ level: 0, status: "RUN", body: "root" },
+		{ level: 0, status: "WORK", body: "root" },
 		{ level: 4, body: "jump" },
 		{ level: 1, body: "sibling" },
 	]), [
-		{ tree: "", status: "RUN", body: "root" },
-		{ tree: "   ├─ ", body: "jump" },
-		{ tree: "   └─ ", body: "sibling" },
+		{ tree: "", status: "WORK", body: "root", childAnchor: 0 },
+		{ tree: "├─ ", body: "jump" },
+		{ tree: "└─ ", body: "sibling" },
 	]);
 });
 
-test("nested guides anchor to the first label character and preserve ancestor lines", () => {
+test("nested guides join parent badge edges and preserve ancestor lines", () => {
 	assert.deepEqual(renderRecords([
 		{ level: 0, status: "DONE", body: "root" },
-		{ level: 1, status: "RUN", body: "child" },
+		{ level: 1, status: "WORK", body: "child" },
 		{ level: 2, body: "grandchild" },
 		{ level: 1, status: "TODO", body: "sibling" },
 		{ level: 0, status: "DONE", body: "next root" },
 	]), [
-		{ tree: "", status: "DONE", body: "root" },
-		{ tree: "  ├─ ", status: "RUN", body: "child" },
-		{ tree: "  │     └─ ", body: "grandchild" },
-		{ tree: "  └─ ", status: "TODO", body: "sibling" },
+		{ tree: "", status: "DONE", body: "root", childAnchor: 0 },
+		{ tree: "├─", status: "WORK", body: "child", childAnchor: 2 },
+		{ tree: "│ └─ ", body: "grandchild" },
+		{ tree: "└─", status: "TODO", body: "sibling" },
 		{ tree: "", status: "DONE", body: "next root" },
 	]);
 });
@@ -75,16 +79,22 @@ test("text sanitation removes terminal escapes, control strings, and controls", 
 	assert.deepEqual(parseItem("  - safe\u001b[2J"), { level: 1, body: "safe" });
 });
 
-test("status badges right-align labels and color one cell on each side", () => {
-	assert.deepEqual(statusBadge("HUMAN"), { leading: "", text: " HUMAN ", gap: " ", blink: true });
-	assert.deepEqual(statusBadge("RUN"), { leading: "  ", text: " RUN ", gap: " ", blink: true });
-	assert.deepEqual(statusBadge("DONE"), { leading: " ", text: " DONE ", gap: " ", blink: false });
-	const totalWidth = (status) => {
+test("status badges use one uniform four-letter label with colored side cells", () => {
+	for (const status of ["TODO", "WORK", "WAIT", "BLKD", "HUMN", "DONE", "HOLD", "DROP"]) {
 		const badge = statusBadge(status);
-		return visibleWidth(badge.leading + badge.text + badge.gap);
-	};
-	assert.equal(totalWidth("HUMAN"), totalWidth("RUN"));
-	assert.equal(totalWidth("DONE"), totalWidth("RUN"));
+		assert.equal(badge.leading, "");
+		assert.equal(visibleWidth(badge.text), 6);
+		assert.equal(badge.text, ` ${status} `);
+		assert.equal(badge.gap, " ");
+	}
+	assert.deepEqual(statusBadge("HUMAN"), statusBadge("HUMN"));
+	assert.deepEqual(statusBadge("BLOCK"), statusBadge("BLKD"));
+	assert.deepEqual(statusBadge("RUN"), statusBadge("WORK"));
+});
+
+test("continuation rows retain ancestor guides and tagged-parent child stems", () => {
+	assert.equal(continuationPrefix(" WORK  ", 0), "│      ");
+	assert.equal(continuationPrefix("├─ WORK  ", 2), "│ │      ");
 });
 
 test("visibleWidth and wrapping handle CJK, combining marks, and emoji graphemes", () => {
@@ -95,5 +105,4 @@ test("visibleWidth and wrapping handle CJK, combining marks, and emoji graphemes
 
 test("wrapping always progresses at tiny widths", () => {
 	assert.deepEqual(wrapBody("abc", 0), ["a", "b", "c"]);
-	assert.equal(continuationPrefix("       ├─ RUN   "), "       │        ");
 });
