@@ -4,6 +4,7 @@ export const STATUSES = ["TODO", "RUN", "WAIT", "BLOCK", "HUMAN", "DONE", "HOLD"
 
 const STATUS_SET = new Set(STATUSES);
 const BLINKING_STATUS_SET = new Set(["RUN", "WAIT", "BLOCK", "HUMAN", "HOLD"]);
+const STATUS_LABEL_WIDTH = Math.max(...STATUSES.map((status) => status.length));
 const SEGMENTER = typeof Intl.Segmenter === "function"
 	? new Intl.Segmenter(undefined, { granularity: "grapheme" })
 	: undefined;
@@ -15,9 +16,10 @@ export function isStatus(value) {
 }
 
 export function statusBadge(status) {
-	if (!isStatus(status)) return { text: "", gap: "", blink: false };
+	if (!isStatus(status)) return { leading: "", text: "", gap: "", blink: false };
 	return {
-		text: ` ${status.padEnd(5)} `,
+		leading: " ".repeat(STATUS_LABEL_WIDTH - status.length),
+		text: ` ${status} `,
 		gap: " ",
 		blink: BLINKING_STATUS_SET.has(status),
 	};

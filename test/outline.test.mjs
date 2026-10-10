@@ -59,11 +59,16 @@ test("text sanitation removes terminal escapes, control strings, and controls", 
 	assert.deepEqual(parseItem("  - safe\u001b[2J"), { level: 1, body: "safe" });
 });
 
-test("status badges have stable width and identify animated states", () => {
-	assert.deepEqual(statusBadge("HUMAN"), { text: " HUMAN ", gap: " ", blink: true });
-	assert.deepEqual(statusBadge("RUN"), { text: " RUN   ", gap: " ", blink: true });
-	assert.deepEqual(statusBadge("DONE"), { text: " DONE  ", gap: " ", blink: false });
-	assert.equal(visibleWidth(statusBadge("HUMAN").text), visibleWidth(statusBadge("RUN").text));
+test("status badges right-align labels and color one cell on each side", () => {
+	assert.deepEqual(statusBadge("HUMAN"), { leading: "", text: " HUMAN ", gap: " ", blink: true });
+	assert.deepEqual(statusBadge("RUN"), { leading: "  ", text: " RUN ", gap: " ", blink: true });
+	assert.deepEqual(statusBadge("DONE"), { leading: " ", text: " DONE ", gap: " ", blink: false });
+	const totalWidth = (status) => {
+		const badge = statusBadge(status);
+		return visibleWidth(badge.leading + badge.text + badge.gap);
+	};
+	assert.equal(totalWidth("HUMAN"), totalWidth("RUN"));
+	assert.equal(totalWidth("DONE"), totalWidth("RUN"));
 });
 
 test("visibleWidth and wrapping handle CJK, combining marks, and emoji graphemes", () => {

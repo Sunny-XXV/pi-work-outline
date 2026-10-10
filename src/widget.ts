@@ -31,10 +31,11 @@ function styleStatus(theme: Theme, status: Status): string {
 
 function stylePrefix(theme: Theme, tree: string, status: Status | undefined): { raw: string; styled: string } {
 	const badge = status ? statusBadge(status) : undefined;
-	const statusText = badge ? badge.text + badge.gap : "";
+	const statusText = badge ? badge.leading + badge.text + badge.gap : "";
 	return {
 		raw: tree + statusText,
-		styled: theme.fg("dim", tree) + (status && badge ? styleStatus(theme, status) + badge.gap : ""),
+		styled: theme.fg("dim", tree + (badge?.leading ?? ""))
+			+ (status && badge ? styleStatus(theme, status) + badge.gap : ""),
 	};
 }
 

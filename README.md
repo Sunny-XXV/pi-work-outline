@@ -88,7 +88,7 @@ The agent writes only two headings and `- ` list items, with two spaces per nest
 
 Supported status labels are `TODO`, `RUN`, `WAIT`, `BLOCK`, `HUMAN`, `DONE`, `HOLD`, and `DROP`. Use `HUMAN` when progress requires a person's answer, approval, authentication, decision, or action; reserve `BLOCK` for unavailable non-human dependencies.
 
-Both renderers display status labels as high-contrast background badges. `RUN`, `WAIT`, `BLOCK`, `HUMAN`, and `HOLD` request terminal-native blink, while passive/completed badges remain static. Terminals that disable blink still show the background colors, and the extension performs no animation polling or periodic redraw.
+Both renderers display status labels as high-contrast background badges. Labels are right-aligned in a five-cell field; the badge background covers one terminal cell before and after the label, followed by one unstyled body gap. `RUN`, `WAIT`, `BLOCK`, `HUMAN`, and `HOLD` request terminal-native blink, while passive/completed badges remain static. Terminals that disable blink still show the background colors, and the extension performs no animation polling or periodic redraw.
 
 ## Design
 
