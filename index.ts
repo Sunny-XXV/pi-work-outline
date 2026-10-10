@@ -161,6 +161,12 @@ export default function workOutlineExtension(pi: ExtensionAPI): void {
 				ctx.ui.notify("Work outline is disabled. Run /work-outline to enable it.", "info");
 				return;
 			}
+			if (action !== "view" && renderMode === "tmux" && (!tmuxPaneId || !tmuxPaneExists(tmuxPaneId))) {
+				tmuxPaneId = undefined;
+				tmuxOwnerId = undefined;
+				renderMode = undefined;
+				startRenderer(ctx);
+			}
 			if (action === "view") {
 				if (ctx.mode !== "tui" || !ctx.hasUI) {
 					ctx.ui.notify("The outline viewer requires interactive TUI mode.", "warning");

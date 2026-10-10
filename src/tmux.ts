@@ -1,4 +1,5 @@
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import * as path from "node:path";
 export type RenderMode = "tmux" | "widget";
 
 const TMUX_OWNER_OPTION = "@work-outline-owner";
@@ -13,9 +14,14 @@ type TmuxStartResult = {
 };
 
 type RunTmux = (args: string[]) => SpawnSyncReturns<string>;
+type RunCommand = (command: string, args: string[]) => SpawnSyncReturns<string>;
 
 function defaultRunTmux(args: string[]): SpawnSyncReturns<string> {
 	return spawnSync("tmux", args, { encoding: "utf8", timeout: 2_000 });
+}
+
+function defaultRunCommand(command: string, args: string[]): SpawnSyncReturns<string> {
+	return spawnSync(command, args, { encoding: "utf8", timeout: 2_000 });
 }
 
 function output(value: string | Buffer | null | undefined): string {
@@ -24,6 +30,18 @@ function output(value: string | Buffer | null | undefined): string {
 
 function resultError(result: SpawnSyncReturns<string>, fallback: string): string {
 	return result.error?.message ?? (output(result.stderr) || fallback);
+}
+
+export function resolveNodeExecutable(
+	hostExecutable = process.execPath,
+	runCommand: RunCommand = defaultRunCommand,
+): string | undefined {
+	if (/^node(?:\.exe)?$/i.test(path.basename(hostExecutable))) return hostExecutable;
+	const result = runCommand("node", ["-p", "process.execPath"]);
+	const nodePath = output(result.stdout);
+	return result.status === 0 && path.isAbsolute(nodePath) && /^node(?:\.exe)?$/i.test(path.basename(nodePath))
+		? nodePath
+		: undefined;
 }
 
 export function tmuxPaneExists(paneId: string, runTmux: RunTmux = defaultRunTmux): boolean {
@@ -45,7 +63,9 @@ export function startTmuxRenderer(
 	if (sourceResult.error) return { attempted: true, error: sourceResult.error.message };
 	if (sourceResult.status !== 0 || output(sourceResult.stdout) !== sourcePane) return { attempted: false };
 
-	const nodePath = process.execPath;
+	const nodePath = resolveNodeExecutable();
+	if (!nodePath) return { attempted: true, error: "Node.js is unavailable for the tmux renderer" };
+	const expectedCommand = path.basename(nodePath);
 
 	const args = [
 		"split-window",
@@ -88,8 +108,12 @@ export function startTmuxRenderer(
 		};
 	}
 
-	const processResult = runTmux(["display-message", "-p", "-t", paneId, "#{pane_pid}\t#{pane_dead}"]);
-	if (processResult.status !== 0 || !/^\d+\t0$/.test(output(processResult.stdout))) {
+	const processResult = runTmux([
+		"display-message", "-p", "-t", paneId,
+		"#{pane_pid}\t#{pane_dead}\t#{pane_current_command}",
+	]);
+	const [panePid, paneDead, paneCommand] = output(processResult.stdout).split("\t");
+	if (processResult.status !== 0 || !/^\d+$/.test(panePid ?? "") || paneDead !== "0" || paneCommand !== expectedCommand) {
 		const cleared = stopTmuxRenderer(paneId, ownerId, runTmux);
 		return {
 			attempted: true,

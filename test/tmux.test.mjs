@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
 	describeRenderMode,
+	resolveNodeExecutable,
 	startTmuxRenderer,
 	stopTmuxRenderer,
 } from "../src/tmux.ts";
@@ -41,7 +42,9 @@ function successfulStartRun(calls) {
 		}
 		if (args[0] === "split-window") return result(0, "%1\n");
 		if (args[0] === "set-option") return result(0);
-		if (args.at(-1) === "#{pane_pid}\t#{pane_dead}") return result(0, "123\t0\n");
+		if (args.at(-1) === "#{pane_pid}\t#{pane_dead}\t#{pane_current_command}") {
+			return result(0, `123\t0\t${process.platform === "win32" ? "node.exe" : "node"}\n`);
+		}
 		return result(1, "", "unexpected");
 	};
 }
@@ -72,6 +75,41 @@ test("tmux renderer keeps the 34 percent default", () => withTmuxEnvironment(() 
 	assert.equal(split[split.indexOf("-p") + 1], "34");
 }));
 
+test("compiled hosts resolve a real Node executable through PATH", () => {
+	const run = (command, args) => {
+		assert.equal(command, "node");
+		assert.deepEqual(args, ["-p", "process.execPath"]);
+		return result(0, "/opt/node/bin/node\n");
+	};
+	assert.equal(resolveNodeExecutable("/nix/store/pi/bin/pi", run), "/opt/node/bin/node");
+});
+
+test("Node hosts use their own executable without PATH discovery", () => {
+	assert.equal(resolveNodeExecutable("/opt/node/bin/node", () => { throw new Error("must not run"); }), "/opt/node/bin/node");
+});
+
+test("compiled-host discovery rejects a non-Node executable response", () => {
+	assert.equal(resolveNodeExecutable("/nix/store/pi/bin/pi", () => result(0, "/nix/store/pi/bin/pi\n")), undefined);
+});
+
+test("startup rejects a live pane running the wrong command", () => withTmuxEnvironment(() => {
+	let paneExists = true;
+	const run = (args) => {
+		if (args[0] === "display-message" && args.at(-1) === "#{pane_id}") {
+			return result(paneExists ? 0 : 1, paneExists ? (args[3] === "%0" ? "%0\n" : "%1\n") : "");
+		}
+		if (args[0] === "split-window") return result(0, "%1\n");
+		if (args[0] === "set-option") return result(0);
+		if (args.at(-1) === "#{pane_pid}\t#{pane_dead}\t#{pane_current_command}") return result(0, "123\t0\tpi\n");
+		if (args[0] === "show-option") return result(0, "owner\n");
+		if (args[0] === "kill-pane") { paneExists = false; return result(0); }
+		return result(1, "", "unexpected");
+	};
+	const start = startTmuxRenderer("/tmp/outline.md", "owner", "/tmp/renderer.mjs", 34, run);
+	assert.equal(start.paneId, undefined);
+	assert.match(start.error, /exited during startup/);
+}));
+
 test("startup rejects a dead retained pane", () => withTmuxEnvironment(() => {
 	let paneExists = true;
 	const run = (args) => {
@@ -80,7 +118,7 @@ test("startup rejects a dead retained pane", () => withTmuxEnvironment(() => {
 		}
 		if (args[0] === "split-window") return result(0, "%1\n");
 		if (args[0] === "set-option") return result(0);
-		if (args.at(-1) === "#{pane_pid}\t#{pane_dead}") return result(0, "123\t1\n");
+		if (args.at(-1) === "#{pane_pid}\t#{pane_dead}\t#{pane_current_command}") return result(0, "123\t1\tnode\n");
 		if (args[0] === "show-option") return result(0, "owner\n");
 		if (args[0] === "kill-pane") { paneExists = false; return result(0); }
 		return result(1, "", "unexpected");
