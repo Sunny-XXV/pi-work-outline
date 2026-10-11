@@ -6,7 +6,7 @@ Maintain the injected observer file while executing the user's task. It is a com
 
 The absolute path is injected below. Use exactly that ordinary UTF-8 file. In TUI mode the extension renders it in tmux when available and otherwise in a Pi widget. Do not start your own renderer, watcher, pane, or background process.
 
-Initialize the file before substantive investigation. Update it whenever the route, status, evidence, or requested outcome materially changes, and before waiting or reporting completion. After an update, continue the task.
+Read the current file before substantive investigation and before updating it; initialize only if needed. The extension restores its contents from the selected Pi tree branch and gives forks a separate default file. Do not replay remembered content from a later or abandoned branch over a restored outline. Update it whenever the route, status, evidence, or requested outcome materially changes, and before waiting or reporting completion. After an update, continue the task.
 
 Use only this Markdown subset:
 
